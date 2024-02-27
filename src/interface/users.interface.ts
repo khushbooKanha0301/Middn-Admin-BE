@@ -26,4 +26,9 @@ export interface IUser extends Document{
     readonly kyc_completed: boolean;
     readonly email_verified: number;
     readonly phone_verified: number;
+    readonly is_kyc_deleted: boolean;
+    readonly passport_url: Express.Multer.File;
+    readonly user_photo_url: Express.Multer.File;
+    readonly admin_checked_at: string;
+    readonly kyc_submitted_date: string;
 }

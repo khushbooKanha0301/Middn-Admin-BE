@@ -96,4 +96,13 @@ export class CreateUserDto {
 	@IsOptional()
 	@IsNumber()
 	phone_verified: number;
+
+	@IsOptional()
+	is_kyc_deleted:boolean;
+
+	@IsOptional()
+	admin_checked_at: string;
+	
+	@IsOptional()
+	kyc_submitted_date: string;
 }

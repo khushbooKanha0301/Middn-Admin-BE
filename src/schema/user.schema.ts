@@ -49,13 +49,26 @@ export class User {
 	is_banned: boolean;
 	@Prop({ default: 0 })
 	is_verified: number;
+
 	@Prop({ default: false })
 	kyc_completed: boolean;
 
 	@Prop()
 	email_verified: number;
+
 	@Prop()
 	phone_verified: number;
+
+	@Prop()
+	passport_url: string;
+
+	@Prop()
+	user_photo_url: string;
+
+	@Prop()
+	admin_checked_at: string;
 	
+	@Prop()
+	kyc_submitted_date:string
 }	
 export const UserSchema = SchemaFactory.createForClass(User);

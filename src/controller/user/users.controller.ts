@@ -17,6 +17,8 @@ import { InjectModel } from "@nestjs/mongoose";
 import { SkipThrottle } from "@nestjs/throttler";
 import { LoginHistoryService } from "src/service/login-history/login-history.service";
 import { IUser } from "src/interface/users.interface";
+import { MailerService } from "@nestjs-modules/mailer";
+import { ConfigService } from "@nestjs/config";
 const moment = require("moment");
 
 @SkipThrottle()
@@ -25,6 +27,8 @@ export class UsersController {
   constructor(
     private readonly userService: UserService,
     private readonly loginHistoryService: LoginHistoryService,
+    private readonly mailerService: MailerService,
+    private configService: ConfigService,
     @InjectModel("user") private userModel: Model<IUser>,
   ) {}
 
@@ -32,7 +36,7 @@ export class UsersController {
   async userList(@Req() req: any, @Res() response) {
     try {
       const page = req.query.page ? req.query.page : 1;
-      const pageSize = req.query.pageSize ? req.query.pageSize : 10;
+      const pageSize = req.query.pageSize ? req.query.pageSize : 5;
       const searchQuery =
         req.query.query !== undefined ? req.query.query.trim() : null;
       const statusFilter = req.query.statusFilter
@@ -49,13 +53,24 @@ export class UsersController {
         searchQuery,
         statusFilter
       );
+
+      const totalCount = await this.userService.getTotalUsersCount();
+      const activeCount = await this.userService.getActiveCount();
+      const banCount = await this.userService.getBanCount();
+      const emailCount = await this.userService.getEmailCount();
+      const phoneCount = await this.userService.getPhoneCount();
+
       if (!usersData) {
         throw new NotFoundException(`Users not found`);
       }
       return response.status(HttpStatus.OK).json({
         message: "User found successfully",
         users: usersData,
-        totalUsersCount: usersCount,
+        totalUsersCount: totalCount,
+        activeCount: activeCount,
+        banCount: banCount,
+        emailCount: emailCount,
+        phoneCount: phoneCount
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);
@@ -116,7 +131,7 @@ export class UsersController {
           message: "Invalid E-mail address.",
         });
       }
-
+      
       if (userData.email) {
         let userEmail = await this.userService.getFindbyEmail(
           UserId,
@@ -126,9 +141,8 @@ export class UsersController {
           return response.status(HttpStatus.BAD_REQUEST).json({
             message: "Email already Exist.",
           });
-        } 
+        }
       }
-
       if(!userData.phone)
       {
         return response.status(HttpStatus.BAD_REQUEST).json({
@@ -150,7 +164,6 @@ export class UsersController {
           UserId,
           userData.phone
         );
-       
         if (userPhone.length) {
           return response.status(HttpStatus.BAD_REQUEST).json({
             message: "Phone already Exist.",
@@ -558,6 +571,13 @@ export class UsersController {
       if (user?.is_banned === false) {
         throw new BadRequestException(`User status already active`);
       }
+      if (user?.email_verified === 0 || user?.email_verified === undefined) {
+        throw new BadRequestException(`User Email Unverified`);
+      }
+
+      if (user?.phone_verified === 0 || user?.phone_verified === undefined) {
+        throw new BadRequestException(`User Mobile Unverified`);
+      }
       
       await this.userService.updateUserById(
         param.id,
@@ -592,10 +612,10 @@ export class UsersController {
       {
         throw new BadRequestException("User's KYC already Approved");
       }
-      
+      const currentDate = moment.utc().format();
       await this.userService.updateUserById(
         param.id,
-        { is_verified: 1}
+        { is_verified: 1, admin_checked_at: currentDate}
       );
 
       const users = await this.userModel.findById(param.id).exec();
@@ -678,6 +698,187 @@ export class UsersController {
       return response.status(HttpStatus.OK).json({
         message: "User Phone Verified successfully",
         users: users,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @SkipThrottle(false)
+  @Post("/rejectKyc/:id")
+  async rejectKyc(
+    @Req() req: any,
+    @Res() response,
+    @Param() param: { id: string }
+  ) {
+    try {
+      const user = await this.userModel.findById(param.id).exec();
+      if (!user) {
+        throw new NotFoundException(`KYC not found`);
+      }
+      if(user?.is_kyc_deleted)
+      {
+        throw new BadRequestException("KYC not found")
+      }
+      if(user?.is_verified === 1)
+      {
+        throw new BadRequestException("User's KYC already Approved");
+      }
+      if (user?.is_verified === 2) {
+        throw new BadRequestException("User's KYC already Rejected");
+      }
+      let currentDate = moment.utc().format();
+      const users = await this.userModel
+        .updateOne(
+          { _id: param.id },
+          { is_verified: 2, admin_checked_at: currentDate }
+        )
+        .exec();
+      if (user.email) {
+        this.mailerService.sendMail({
+          to: user?.email,
+          subject: "Middn :: Your KYC has been rejected",
+          template: "message",
+          context: {
+            title: "Sorry !!! Your KYC has been Rejected",
+            message: req.body.message ? req.body.message : "Reason not added",
+          },
+        }).catch((error)=>{
+          console.log(error);
+        });
+      }
+      if (!users) {
+        throw new NotFoundException(`Users not found`);
+      }
+      return response.status(HttpStatus.OK).json({
+        message: "User found successfully",
+        users: users,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Get("/kycUserList")
+  async kycUserList(@Req() req: any, @Res() response) {
+    try {
+      const page = req.query.page ? req.query.page : 1;
+      const pageSize = req.query.pageSize ? req.query.pageSize : 5;
+      const searchQuery = req.query.query !== undefined ? req.query.query : null;
+      const statusFilter = req.query.statusFilter ? req.query.statusFilter : null;
+      const usersData = await this.userService.getKycUsers(
+        page,
+        pageSize,
+        searchQuery,
+        statusFilter
+      );
+
+      const usersCount = await this.userService.getKycUserCount(
+        searchQuery,
+        statusFilter
+      );
+      if (!usersData) {
+        throw new NotFoundException(`Users not found`);
+      }
+      return response.status(HttpStatus.OK).json({
+        message: "User found successfully",
+        users: usersData,
+        totalUsersCount: usersCount,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @Get("/viewKyc/:id")
+  async viewKyc(
+    @Req() req: any,
+    @Res() response,
+    @Param() param: { id: string }
+  ) {
+    try {
+      const user = await this.userModel.findById(param.id).select("-referred_by -wallet_type -nonce -is_2FA_login_verified -__v -google_auth_secret").exec();
+      if (!user) {
+        throw new NotFoundException(`KYC not found`);
+      }
+      if (user?.is_kyc_deleted) {
+        throw new NotFoundException(`KYC not found`);
+      }
+      let passport_url = "";
+      let user_photo_url = "";
+      if (user.passport_url) {
+        const s3 = this.configService.get("s3");
+        const bucketName = this.configService.get("aws_s3_bucket_name");
+        passport_url = await s3.getSignedUrl("getObject", {
+          Bucket: bucketName,
+          Key: user.passport_url ? user.passport_url : "",
+          Expires: 604800,
+        });
+      }
+      if (user.user_photo_url) {
+        const s3 = this.configService.get("s3");
+        const bucketName = this.configService.get("aws_s3_bucket_name");
+        user_photo_url = await s3.getSignedUrl("getObject", {
+          Bucket: bucketName,
+          Key: user.user_photo_url ? user.user_photo_url : "",
+          Expires: 604800,
+        });
+      }
+
+      return response.status(HttpStatus.OK).json({
+        message: "User found successfully",
+        user: user,
+        passport_url: passport_url,
+        user_photo_url: user_photo_url,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  @SkipThrottle(false)
+  @Get("/deleteKyc/:id")
+  async deleteKyc(
+    @Req() req: any,
+    @Res() response,
+    @Param() param: { id: string }
+  ) {
+    try {
+      const userData = await this.userModel.findById(param.id);
+      if(!userData)
+      {
+        throw new NotFoundException(`KYC not found`);
+      }
+      if (userData?.is_kyc_deleted === true) {
+        throw new BadRequestException(`User's KYC already deleted`);
+      }
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          param.id,
+          {
+            $set: {
+              mname: "",
+              res_address: "",
+              postal_code: "",
+              city: "",
+              country_of_issue: "",
+              verified_with: "",
+              passport_url: "",
+              user_photo_url: "",
+              is_kyc_deleted: true,
+              kyc_completed: false,
+              is_verified: 0,
+            },
+          },
+          { new: true }
+        )
+        .exec();
+      if (!user) {
+        throw new NotFoundException(`User #${param.id} not found`);
+      }
+
+      return response.status(HttpStatus.OK).json({
+        message: "User KYC deleted successfully...",
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);

@@ -137,7 +137,7 @@ export class UserService {
     querySearch?: any,
     statusFilter?: any
   ): Promise<any> {
-    let usersQuery = this.userModel.find().select('_id nonce joined_at fname_alias lname_alias email fname lname phone phoneCountry is_banned');
+    let usersQuery = this.userModel.find().select('_id nonce joined_at fname_alias lname_alias email fname lname phone phoneCountry is_banned email_verified phone_verified');
     if (querySearch !== "null" && querySearch !== null && querySearch !== "") {
       querySearch = querySearch.trim();
       const regexQuery = new RegExp(querySearch);
@@ -173,35 +173,45 @@ export class UserService {
         ],
       });
     }
-    
-    if(statusFilter === 0){
+    let users;
+    if(statusFilter === 'Active'){
       usersQuery = usersQuery.where({
         $or: [
           { is_banned: false },
           { is_banned: undefined }
         ],
-        is_banned: { $ne: true }
+        $and: [
+          {email_verified:1, phone_verified : 1} 
+        ]
       });
-    } else if (statusFilter === 1){
+      // users.activeCount = await usersQuery.countDocuments();
+    } else if (statusFilter === 'Ban'){
       usersQuery = usersQuery.where({
         is_banned:true
       });
-    } else if (statusFilter === 2){
+    } else if (statusFilter === 'Email'){
       usersQuery = usersQuery.where({
-        email_verified:1
+        $or: [
+          { email_verified:0 },
+          { email_verified: undefined }
+        ],
+        is_banned: { $ne: true }
       });
-    } else if (statusFilter === 2){
+    } else if (statusFilter === 'Mobile'){
       usersQuery = usersQuery.where({
-        phone_verified:1
+        $or: [
+          { phone_verified: 0 },
+          { phone_verified: undefined }
+        ],
+        is_banned: { $ne: true }
       });
     }
-    
+
     if (page && pageSize) {
       const skipCount = (page - 1) * pageSize;
       usersQuery = usersQuery.skip(skipCount).limit(pageSize);
     }
-    const users = await usersQuery.exec();
-   
+    users = await usersQuery.exec();
     if (!users) {
       throw new NotFoundException(`Users not found`);
     }
@@ -246,31 +256,97 @@ export class UserService {
         ]
       });
     }
-  
-    if(statusFilter === 0){
+
+    if(statusFilter === 'Active'){
       userQuery = userQuery.where({
         $or: [
           { is_banned: false },
           { is_banned: undefined }
         ],
-        is_banned: { $ne: true }
+        $and: [
+          {email_verified:1, phone_verified : 1} 
+        ]
       });
-    } else if (statusFilter === 1){
+    } else if (statusFilter === 'Ban'){
       userQuery = userQuery.where({
         is_banned:true
       });
-    } else if (statusFilter === 2){
+    } else if (statusFilter === 'Email'){
       userQuery = userQuery.where({
-        email_verified:1
+        $or: [
+          { email_verified:0 },
+          { email_verified: undefined }
+        ],
+        is_banned: { $ne: true }
       });
-    } else if (statusFilter === 2){
+    } else if (statusFilter === 'Mobile'){
       userQuery = userQuery.where({
-        phone_verified:1
+        $or: [
+          { phone_verified:0 },
+          { phone_verified: undefined }
+        ],
+        is_banned: { $ne: true }
       });
     }
-
     const count = await userQuery.countDocuments();
     return count;
+  }
+
+  async getActiveCount() {
+    let userQuery = this.userModel.find();
+    userQuery = userQuery.where({
+      $or: [
+        { is_banned: false },
+        { is_banned: undefined }
+      ],
+      $and: [
+        {email_verified:1, phone_verified : 1} 
+      ]
+    });
+    const activeCount = await userQuery.countDocuments();
+    return activeCount
+  }
+
+  async getTotalUsersCount() {
+    let userQuery = this.userModel.find();
+    const totalCount = await userQuery.countDocuments();
+    return totalCount
+  }
+
+
+  async getBanCount() {
+    let userQuery = this.userModel.find();
+    userQuery = userQuery.where({
+      is_banned:true
+    });
+    const banCount = await userQuery.countDocuments();
+    return banCount
+  }
+
+  async getEmailCount() {
+    let userQuery = this.userModel.find();
+    userQuery = userQuery.where({
+      $or: [
+        { email_verified: 0 },
+        { email_verified: undefined }
+      ],
+      is_banned: { $ne: true }
+    });
+    const emailCount = await userQuery.countDocuments();
+    return emailCount
+  }
+
+  async getPhoneCount() {
+    let userQuery = this.userModel.find();
+    userQuery = userQuery.where({
+      $or: [
+        { phone_verified:0 },
+        { phone_verified: undefined }
+      ],
+      is_banned: { $ne: true }
+    });
+    const phoneCount = await userQuery.countDocuments();
+    return phoneCount
   }
 
   async getUserWithImage(userId) {
@@ -302,16 +378,229 @@ export class UserService {
     .findOne({ $and: [{ _id }, { email }] })
     .select("-_id email")
     .exec();
-  
-    return existingUser;
+    if(existingUser){
+      return existingUser
+    }
+    return [];
   }
   async getFindbyPhone(_id: string, phone: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { phone }] })
     .select("-_id phone")
     .exec();
-  
-    return existingUser;
+    if(existingUser){
+      return existingUser
+    }
+    return [];
   }
 
+  async getKycUsers(
+    page?: number,
+    pageSize?: number,
+    querySearch?: any,
+    statusFilter?: any
+  ): Promise<any> {
+    let usersQuery = this.userModel.find({
+      kyc_completed: true,
+    });
+
+    if (querySearch !== "null" && querySearch !== null) {
+      querySearch = querySearch.trim();
+      const regexQuery = new RegExp(querySearch);
+      usersQuery = usersQuery.where({
+        $or: [
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$wallet_address" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$fname" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$lname" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $concat: ["$fname", " ", "$lname"] },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$email" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$phone" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$city" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$verified_with" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+        ],
+      });
+    }
+    if (statusFilter !== "All" && statusFilter !== null) {
+      if (statusFilter === "Pending") {
+        usersQuery = usersQuery.where({ is_verified: 0 });
+      } else if (statusFilter === "Approved") {
+        usersQuery = usersQuery.where({ is_verified: 1 });
+      } else if (statusFilter === "Rejected") {
+        usersQuery = usersQuery.where({ is_verified: 2 });
+      }
+    }
+
+    if (page && pageSize) {
+      // Calculate the number of documents to skip
+      const skipCount = (page - 1) * pageSize;
+      usersQuery = usersQuery.skip(skipCount).limit(pageSize);
+    }
+    usersQuery = usersQuery.select("-google_auth_secret -nonce -wallet_type -__v -is_2FA_login_verified -is_kyc_deleted -referred_by");
+    const users = await usersQuery.exec();
+
+    if (!users) {
+      throw new NotFoundException(`Users not found`);
+    }
+    return users;
+  }
+  async getKycUserCount(searchQuery: any, statusFilter: any) {
+    let userQuery = this.userModel.find();
+
+    if (searchQuery !== "null" &&  searchQuery !== null) {
+      searchQuery = searchQuery.trim();
+      const regexQuery = new RegExp(searchQuery);
+      userQuery = userQuery.where({
+        $or: [
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$wallet_address" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$fname" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$lname" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $concat: ["$fname", " ", "$lname"] },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$email" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$phone" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$city" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$verified_with" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    if (statusFilter !== "All") {
+      if (statusFilter === "Pending") {
+        userQuery = userQuery.where({ is_verified: 0 });
+      } else if (statusFilter === "Approved") {
+        userQuery = userQuery.where({ is_verified: 1 });
+      } else if (statusFilter === "Rejected") {
+        userQuery = userQuery.where({ is_verified: 2 });
+      }
+    }
+    const count = await userQuery.countDocuments({ kyc_completed: true });
+    return count;
+  }
 }
