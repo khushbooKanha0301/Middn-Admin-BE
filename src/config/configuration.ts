@@ -1,7 +1,7 @@
 let AWS = require('aws-sdk')
 
 export default () => ({
-	port: parseInt(process.env.NEST_PORT, 10) || 4000,
+	port: parseInt(process.env.NEST_PORT, 10) || 4001,
 	database_url: process.env.NEST_DATABASE_URL,
 	aws_s3_bucket_name : process.env.NEST_AWS_BUCKT_KEY,
 	jwt_secret : process.env.NEST_JWT_SECRET,

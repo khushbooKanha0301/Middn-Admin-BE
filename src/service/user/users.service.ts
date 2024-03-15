@@ -184,7 +184,6 @@ export class UserService {
           {email_verified:1, phone_verified : 1} 
         ]
       });
-      // users.activeCount = await usersQuery.countDocuments();
     } else if (statusFilter === 'Ban'){
       usersQuery = usersQuery.where({
         is_banned:true

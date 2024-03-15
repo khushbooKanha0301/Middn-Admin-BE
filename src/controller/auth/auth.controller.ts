@@ -166,7 +166,7 @@ export class AuthController {
       const payload = { username: req.body.userName, userId: result._id, access: result.access };
       const token = await jwt.sign(payload, jwtSecret, { expiresIn: "24h" });
       const roleId = result.role_id;
-      let newToken = await this.tokenService.createToken({ token, roleId });
+      await this.tokenService.createToken({ token, roleId });
      
       return response.json({
         token: token,
