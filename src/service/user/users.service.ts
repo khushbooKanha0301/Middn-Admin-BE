@@ -14,10 +14,12 @@ export class UserService {
     @InjectModel("user") private userModel: Model<IUser>,
     private configService: ConfigService
   ) {}
+
   async createUser(CreateUserDto: CreateUserDto): Promise<IUser> {
     const newUser = await new this.userModel(CreateUserDto);
     return newUser.save();
   }
+
   async updateUser(
     userId: string,
     body: UpdateUserProfileDto,
@@ -88,17 +90,20 @@ export class UserService {
   async getUser(userId: string): Promise<any> {
     const existingUser = await this.userModel
       .findById(userId)
-      .select("-_id -__v -nonce -wallet_address -wallet_type -is_2FA_login_verified -google_auth_secret")
+      .select("-_id -__v -nonce -wallet_type -is_2FA_login_verified -google_auth_secret")
       .exec();
+
   
     return existingUser;
   }
+
   async getFindbyAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
       .exec();
     return existingUser;
   }
+
   async deleteUser(userId: string): Promise<IUser> {
     const deletedUser = await this.userModel.findByIdAndDelete(userId);
     if (!deletedUser) {
@@ -106,11 +111,13 @@ export class UserService {
     }
     return deletedUser;
   }
+
   async getAllUsersExceptAuth(userId: string): Promise<any> {
     const allUsers = await this.userModel.find();
     const existingUser = allUsers.filter((user) => user.id !== userId);
     return existingUser;
   }
+
   async getUserDetailByAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
@@ -120,6 +127,7 @@ export class UserService {
     }
     return existingUser;
   }
+
   async getOnlyUserBioByAddress(address: string): Promise<any> {
     const existingUser = await this.userModel
       .findOne({ wallet_address: address })
@@ -312,7 +320,6 @@ export class UserService {
     return totalCount
   }
 
-
   async getBanCount() {
     let userQuery = this.userModel.find();
     userQuery = userQuery.where({
@@ -382,6 +389,7 @@ export class UserService {
     }
     return [];
   }
+  
   async getFindbyPhone(_id: string, phone: string): Promise<any>{
     const existingUser = await this.userModel
     .findOne({ $and: [{ _id }, { phone }] })
@@ -506,6 +514,7 @@ export class UserService {
     }
     return users;
   }
+
   async getKycUserCount(searchQuery: any, statusFilter: any) {
     let userQuery = this.userModel.find();
 

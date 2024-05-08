@@ -22,6 +22,8 @@ import { AdminService } from "./service/admin/admin.service";
 import { MailerModule } from "@nestjs-modules/mailer";
 import { HandlebarsAdapter } from "@nestjs-modules/mailer/dist/adapters/handlebars.adapter";
 import { join } from "path";
+import { ReportUserService } from "./service/report-users/reportUser.service";
+import { ReportUsersSchema } from "./schema/reportUsers.schema";
 
 @Module({
   imports: [
@@ -31,6 +33,9 @@ import { join } from "path";
     MongooseModule.forFeature([{ name: "message", schema: MessageSchema }]),
     MongooseModule.forFeature([{ name: "token", schema: TokenSchema }]),
     MongooseModule.forFeature([{ name: "login_history", schema: LoginHistorySchema }]),
+    MongooseModule.forFeature([
+      { name: "report_users", schema: ReportUsersSchema },
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -71,6 +76,7 @@ import { join } from "path";
     TokenService,
     LoginHistoryService,
     AdminService,
+    ReportUserService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

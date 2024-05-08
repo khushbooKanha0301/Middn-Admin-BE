@@ -16,7 +16,7 @@ import { IAdmin } from "src/interface/admins.interface";
 import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
 
-var jwt = require("jsonwebtoken");
+let jwt = require("jsonwebtoken");
 const moment = require("moment");
 const jwtSecret = "eplba";
 
@@ -30,6 +30,12 @@ export class AuthController {
     @InjectModel("admin") private adminModel: Model<IAdmin>,
   ) {}
 
+  /**
+   * Retrieves user details by their address, including their profile information.
+   * @param response 
+   * @param address 
+   * @returns 
+   */
   @Get("/getuser/:address")
   async getUserDetailByAddress(
     @Res() response,
@@ -57,6 +63,12 @@ export class AuthController {
     }
   }
 
+  /**
+   *  Sends a one-time password (OTP) to the provided email address for password reset.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/forgotpassword")
   async forgotPassword(@Res() response, @Req() req: any) {
@@ -94,6 +106,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * Checks if the provided OTP matches the OTP stored for the given email address.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/checkOTP")
   async checkOTP(@Res() response, @Req() req: any) {
@@ -113,6 +131,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * Resets the password for the user associated with the provided email address.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/resetPassword")
   async resetPassword(@Res() response, @Req() req: any) {
@@ -149,6 +173,12 @@ export class AuthController {
     }
   }
 
+  /**
+   *  Logs in an admin user with the provided username and password.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/adminlogin")
   async adminlogin(@Res() response, @Req() req: any) {
@@ -186,6 +216,12 @@ export class AuthController {
     }
   }
 
+  /**
+   * Logs out an admin user by deleting the provided JWT token.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @Post("/adminlogout")
   async adminLogout(@Res() response, @Req() req: any) {
     try {

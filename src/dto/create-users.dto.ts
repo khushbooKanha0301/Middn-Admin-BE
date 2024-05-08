@@ -1,4 +1,5 @@
-import { IsOptional, IsNumber, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsNumber, IsString } from "class-validator";
+
 export class CreateUserDto {
 	@IsOptional()
 	@IsString()

@@ -19,6 +19,7 @@ import { LoginHistoryService } from "src/service/login-history/login-history.ser
 import { IUser } from "src/interface/users.interface";
 import { MailerService } from "@nestjs-modules/mailer";
 import { ConfigService } from "@nestjs/config";
+import { ReportUserService } from "src/service/report-users/reportUser.service";
 const moment = require("moment");
 
 @SkipThrottle()
@@ -28,10 +29,17 @@ export class UsersController {
     private readonly userService: UserService,
     private readonly loginHistoryService: LoginHistoryService,
     private readonly mailerService: MailerService,
+    private readonly reportUserService: ReportUserService,
     private configService: ConfigService,
     @InjectModel("user") private userModel: Model<IUser>,
   ) {}
 
+  /**
+   * Retrieves a list of users based on optional query parameters such as page, pageSize, searchQuery, and statusFilter.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/userList")
   async userList(@Req() req: any, @Res() response) {
     try {
@@ -53,7 +61,7 @@ export class UsersController {
         searchQuery,
         statusFilter
       );
-
+     
       const totalCount = await this.userService.getTotalUsersCount();
       const activeCount = await this.userService.getActiveCount();
       const banCount = await this.userService.getBanCount();
@@ -66,7 +74,8 @@ export class UsersController {
       return response.status(HttpStatus.OK).json({
         message: "User found successfully",
         users: usersData,
-        totalUsersCount: totalCount,
+        totalUsersCount: usersCount,
+        allUserCount: totalCount,
         activeCount: activeCount,
         banCount: banCount,
         emailCount: emailCount,
@@ -77,6 +86,14 @@ export class UsersController {
     }
   }
 
+  /**
+   * Updates user information with the provided data.
+   * @param req 
+   * @param response 
+   * @param userData 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/updateUser/:id")
   async updateUser(
@@ -436,6 +453,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @Get("/getUserById/:id")
   async getUserById(@Req() req: any, @Res() response,@Param() param: { id: string }) {
     try {
@@ -451,6 +475,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves login history for a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @Get("/getLoginHistory/:id")
   async getLoginHistory(@Req() req: any, @Res() response,@Param() param: { id: string }) {
     try {
@@ -482,6 +513,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Disables Two-Factor Authentication (2FA) for a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/twoFADisableUser/:id")
   async twoFADisableUser(
@@ -513,6 +551,12 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves the total count of users.
+   * @param response 
+   * @param req 
+   * @returns 
+   */
   @Get("/getUsersCount")
   async getUsersCount(@Res() response, @Req() req: any) {
     try {
@@ -527,6 +571,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * This Api endpoint is used to Bans a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/bannedUser/:id")
   async bannedUser(
@@ -556,6 +607,13 @@ export class UsersController {
     }
   }
 
+  /**
+   *  Activates a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/activeUser/:id")
   async activeUser(
@@ -595,6 +653,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Accepts KYC for a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Get("/acceptKyc/:id")
   async acceptKyc(
@@ -631,6 +696,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Marks a user's email as verified by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/userEmailVerified/:id")
   async userEmailVerified(
@@ -668,6 +740,13 @@ export class UsersController {
     }
   }
   
+  /**
+   *  Marks a user's mobile phone as verified by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Put("/userMobileVerified/:id")
   async userMobileVerified(
@@ -704,6 +783,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves the user by their ID, checks if the KYC is already approved or rejected,
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Post("/rejectKyc/:id")
   async rejectKyc(
@@ -759,6 +845,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves a list of users for KYC verification.
+   * with optional pagination, search query, and status filter.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
   @Get("/kycUserList")
   async kycUserList(@Req() req: any, @Res() response) {
     try {
@@ -790,6 +883,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Retrieves KYC details of a user by ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @Get("/viewKyc/:id")
   async viewKyc(
     @Req() req: any,
@@ -836,6 +936,13 @@ export class UsersController {
     }
   }
 
+  /**
+   * Deletes KYC details of a user by ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
   @SkipThrottle(false)
   @Get("/deleteKyc/:id")
   async deleteKyc(
@@ -879,6 +986,74 @@ export class UsersController {
 
       return response.status(HttpStatus.OK).json({
         message: "User KYC deleted successfully...",
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  /**
+   * Retrieves a list of reported users.
+   * @param req 
+   * @param response 
+   * @returns 
+   */
+  @Get("/reportUserList")
+  async reportUserList(@Req() req: any, @Res() response) {
+    try {
+      const page = req.query.page ? req.query.page : 1;
+      const pageSize = req.query.pageSize ? req.query.pageSize : 5;
+      const searchQuery = req.query.query !== undefined ? req.query.query : null;
+    
+      const usersData = await this.reportUserService.getReportUsers(
+        page,
+        pageSize,
+        searchQuery
+      );
+
+      const usersCount = await this.reportUserService.getReportUserCount(searchQuery);
+      if (!usersData) {
+        throw new NotFoundException(`Users not found`);
+      }
+      return response.status(HttpStatus.OK).json({
+        message: "User found successfully",
+        users: usersData,
+        totalUsersCount: usersCount,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
+
+  /**
+   * Retrieves reported users by their address.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+   */
+  @Get("/reportUser/:address")
+  async reportUser(@Req() req: any, @Res() response,   @Param() param: { address: string }) {
+    try {
+      const page = req.query.page ? req.query.page : 1;
+      const pageSize = req.query.pageSize ? req.query.pageSize : 5;
+      const searchQuery = req.query.query !== undefined ? req.query.query : null;
+    
+      const usersData = await this.reportUserService.getReportUsersById(
+        page,
+        pageSize,
+        param.address,
+        searchQuery
+      );
+
+      const usersCount = await this.reportUserService.getReportUserCountById(param.address);
+      if (!usersData) {
+        throw new NotFoundException(`Users not found`);
+      }
+      return response.status(HttpStatus.OK).json({
+        message: "User found successfully",
+        users: usersData,
+        totalUsersCount: usersCount,
       });
     } catch (err) {
       return response.status(HttpStatus.BAD_REQUEST).json(err.response);

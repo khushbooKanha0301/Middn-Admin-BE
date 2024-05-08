@@ -1,4 +1,5 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+
 @Schema()
 export class Message {
 	@Prop()
@@ -16,13 +17,14 @@ export class Message {
 	@Prop()
 	file: string;
 }	
+
 export const MessageSchema = SchemaFactory.createForClass(Message);
 
 MessageSchema.pre('save', function (next) {
 	const currentDate = new Date();
-	this.updated_at = currentDate;
-	if (!this.created_at) {
-	  this.created_at = currentDate;
-	}
-	next();
-  });
+    this.updated_at = currentDate;
+    if (!this.created_at) {
+	    this.created_at = currentDate;
+    }
+    next();
+});   

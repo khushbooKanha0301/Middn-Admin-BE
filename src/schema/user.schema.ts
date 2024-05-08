@@ -1,7 +1,7 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+
 @Schema()
 export class User {
-	
 	@Prop()
 	fname: string;
 
@@ -95,4 +95,5 @@ export class User {
 	@Prop()
 	kyc_submitted_date:string
 }	
+
 export const UserSchema = SchemaFactory.createForClass(User);

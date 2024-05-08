@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { MailerService } from "@nestjs-modules/mailer";
 import { IAdmin } from "src/interface/admins.interface";
 import { Model } from "mongoose";
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from "@nestjs/config";
-import { join } from "path";
 
 @Injectable()
 export class AdminService {
