@@ -24,6 +24,7 @@ import { HandlebarsAdapter } from "@nestjs-modules/mailer/dist/adapters/handleba
 import { join } from "path";
 import { ReportUserService } from "./service/report-users/reportUser.service";
 import { ReportUsersSchema } from "./schema/reportUsers.schema";
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -40,10 +41,16 @@ import { ReportUsersSchema } from "./schema/reportUsers.schema";
       isGlobal: true,
       load: [configuration],
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/images/', // Serve files from this URL path (e.g., /assets/image.png)
+      exclude: ['/'], // Prevent serving an index file at the root URL
+    }),
     MailerModule.forRoot({
       transport: {
         host: process.env.MIDDN_MAIL_HOST,
         port: process.env.MIDDN_MAIL_PORT,
+        secure:false,
         auth: {
           user: process.env.MIDDN_MAIL_USER,
           pass: process.env.MIDDN_MAIL_PASSWORD,
@@ -88,6 +95,7 @@ export class AppModule {
     consumer.apply(AuthenticateMiddleware).forRoutes("/users");
     consumer.apply(CustomThrottleMiddleware).forRoutes(
       "/users/twoFADisableUser/:id",
+      "/users/twoFASMSDisableUser/:id",
       "/users/updateUser/:id",
       "/auth/adminlogin",
       "/auth/adminlogout"

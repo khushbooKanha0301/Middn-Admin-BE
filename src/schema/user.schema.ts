@@ -21,6 +21,9 @@ export class User {
 	phoneCountry: string;
 
 	@Prop()
+	cca3: string;
+
+	@Prop()
 	email: string;
 
 	@Prop()
@@ -77,8 +80,8 @@ export class User {
 	@Prop({ default: false })
 	kyc_completed: boolean;
 
-	@Prop()
-	email_verified: number;
+	@Prop({ default: false })
+	email_verified: boolean;
 
 	@Prop()
 	phone_verified: number;
@@ -94,6 +97,17 @@ export class User {
 	
 	@Prop()
 	kyc_submitted_date:string
+
+	@Prop()
+	twilioOTP: string;
+	@Prop()
+	otpCreatedAt: string;
+	@Prop()
+	otpExpiresAt: string;
+	@Prop({ default: true })
+	is_2FA_twilio_login_verified: boolean;
+	@Prop({ default: false })
+	is_2FA_SMS_enabled: boolean;
 }	
 
 export const UserSchema = SchemaFactory.createForClass(User);

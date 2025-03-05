@@ -148,15 +148,32 @@ export class UsersController {
           message: "Invalid E-mail address.",
         });
       }
-      
+
       if (userData.email) {
-        let userEmail = await this.userService.getFindbyEmail(
-          UserId,
-          userData.email
-        );
-        if (userEmail.length) {
-          return response.status(HttpStatus.BAD_REQUEST).json({
-            message: "Email already Exist.",
+        try {
+          // Check if the email already exists in the system
+          const userEmail = await this.userService.getFindbyEmail(userData.email);
+          
+          // Safely check if userEmail exists before accessing its properties
+          if (userEmail && userEmail._id && userEmail._id.toString() !== UserId) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Email already exists.",
+            });
+          }
+      
+          // Check if the email is being updated and is verified
+          const userEmailCheck = await this.userService.getFindbyId(UserId);
+         
+          // If the email is verified and the user is trying to change it
+          if (userEmailCheck && userEmailCheck.email_verified && userEmailCheck.email !== userData.email) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Your email address is already verified and cannot be changed.",
+            });
+          }
+        } catch (error) {
+          console.error("Error while checking email existence: ", error);
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            message: "An error occurred while processing the request.",
           });
         }
       }
@@ -177,15 +194,32 @@ export class UsersController {
       }      
       
       if (userData.phone) {
-        let userPhone = await this.userService.getFindbyPhone(
-          UserId,
-          userData.phone
-        );
-        if (userPhone.length) {
-          return response.status(HttpStatus.BAD_REQUEST).json({
-            message: "Phone already Exist.",
+        try {
+          // Check if the phone already exists in the system
+          const userPhone = await this.userService.getFindbyPhone(userData.phone);
+          
+          // Safely check if userEmail exists before accessing its properties
+          if (userPhone && userPhone._id && userPhone._id.toString() !== UserId) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Phone already exists.",
+            });
+          }
+      
+          // Check if the phone is being updated and is verified
+          const userPhoneCheck = await this.userService.getPhonebyId(UserId);
+          
+          // If the phone is verified and the user is trying to change it
+          if (userPhoneCheck && userPhoneCheck.phone_verified && (userPhoneCheck?.phone !== userData?.phone || userPhoneCheck?.phoneCountry !== userData?.phoneCountry)) {
+            return response.status(HttpStatus.BAD_REQUEST).json({
+              message: "Your phone is already verified and cannot be changed.",
+            });
+          }
+        } catch (error) {
+          console.error("Error while checking phone existence: ", error);
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            message: "An error occurred while processing the request.",
           });
-        } 
+        }
       }
 
       const countryCode = [
@@ -438,7 +472,7 @@ export class UsersController {
           message: "Invalid country code.",
         });
       }
-
+      console.log("userData", userData)
       await this.userService.updateUserById(
         UserId,
         userData
@@ -629,7 +663,7 @@ export class UsersController {
       if (user?.is_banned === false) {
         throw new BadRequestException(`User status already active`);
       }
-      if (user?.email_verified === 0 || user?.email_verified === undefined) {
+      if (!user?.email_verified || user?.email_verified === undefined) {
         throw new BadRequestException(`User Email Unverified`);
       }
 
@@ -682,6 +716,32 @@ export class UsersController {
         param.id,
         { is_verified: 1, admin_checked_at: currentDate}
       );
+      const updateData = await this.userModel.findById(param.id);
+      if (updateData.is_verified == 1 && updateData.email) {
+        const globalContext = {
+          formattedDate: moment().format("dddd, MMMM D, YYYY"),
+          greeting: `Dear ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe" + ","}`,
+          heading: "KYC Approved Email",
+          para1: "Thank you for submitting your verification request.",
+          para2: "We are pleased to let you know that your identity (KYC) has been verified and you are granted to participate in our token sale.",
+          para3: "We invite you to get back to contributor account and purchase token before sales end.",
+          title: "KYC Approved Email"
+        };
+        this.mailerService
+        .sendMail({
+          to: updateData?.email,
+          subject: "Middn :: KYC Verified : Contribute",
+          template: "confirm-email",
+          context: {
+            ...globalContext
+          },
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+      }
 
       const users = await this.userModel.findById(param.id).exec();
       if (!users) {
@@ -720,13 +780,13 @@ export class UsersController {
         throw new BadRequestException(`Email isn't exists`);
       }
 
-      if (user?.email_verified === 1) {
+      if (user?.email_verified) {
         throw new BadRequestException(`User email already verified`);
       }
       
       await this.userService.updateUserById(
         param.id,
-        { email_verified: 1 }
+        { email_verified: true }
       );
 
       const users = await this.userModel.findById(param.id).exec();
@@ -820,18 +880,34 @@ export class UsersController {
           { is_verified: 2, admin_checked_at: currentDate }
         )
         .exec();
-      if (user.email) {
-        this.mailerService.sendMail({
-          to: user?.email,
-          subject: "Middn :: Your KYC has been rejected",
-          template: "message",
-          context: {
-            title: "Sorry !!! Your KYC has been Rejected",
-            message: req.body.message ? req.body.message : "Reason not added",
-          },
-        }).catch((error)=>{
-          console.log(error);
-        });
+      const updateData = await this.userModel.findById(param.id);
+      
+      if (updateData.email && updateData.is_verified === 2) {
+        const globalContext = {
+          formattedDate: moment().format('dddd, MMMM D, YYYY'),
+         
+          greeting: `Dear ${updateData?.fname
+            ? updateData?.fname + " " + updateData?.lname
+            : "John Doe" + ","}`,
+          para1: "Thank you for submitting your verification request. We're having difficulties verifying your identity.",
+          para2: "The information you had submitted was unfortunately rejected for following reason:",
+          message: req.body.message ? req.body.message : "Reason not added",
+          para3: "Don't be upset! Still you want to verity your identity, please get back to your account and fill form with proper information and upload correct documents to complete your identity verification process.",
+          title: "KYC Rejected Email"
+        };
+
+        this.mailerService
+          .sendMail({
+            to: updateData?.email,
+            subject: "Middn :: KYC Application has been rejected",
+            template: "confirm-email",
+            context: {
+              ...globalContext
+            },
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       }
       if (!users) {
         throw new NotFoundException(`Users not found`);
@@ -1060,4 +1136,43 @@ export class UsersController {
     }
   }
   
+  /**
+   * Disables Two-Factor Authentication (2FA) for a user by their ID.
+   * @param req 
+   * @param response 
+   * @param param 
+   * @returns 
+  */
+  @SkipThrottle(false)
+  @Post("/twoFASMSDisableUser/:id")
+  async twoFASMSDisableUser(
+    @Req() req: any,
+    @Res() response,
+    @Param() param: { id: string }
+  ) {
+    try {
+      const user = await this.userModel.findById(param.id).exec();
+      if (!user) {
+        throw new NotFoundException(`User #${param.id} not found`);
+      }
+      if (user.is_2FA_SMS_enabled === false) {
+        return response
+          .status(HttpStatus.BAD_REQUEST)
+          .json({message:"This user's SMS 2FA already disabled"});
+      }
+      user.is_2FA_SMS_enabled = false;
+      user.is_2FA_twilio_login_verified = true;
+      user.twilioOTP = null;
+      user.otpCreatedAt = null;
+      user.otpExpiresAt = null;
+      await user.save();
+      const userObj = await this.userService.getUserWithImage(param.id);
+      return response.status(HttpStatus.OK).json({
+        message: "User's SMS 2FA Disabled successfully",
+        User: userObj,
+      });
+    } catch (err) {
+      return response.status(HttpStatus.BAD_REQUEST).json(err.response);
+    }
+  }
 }

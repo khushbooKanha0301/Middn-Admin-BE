@@ -8,6 +8,7 @@ export interface IUser extends Document{
     readonly email: string;
 	readonly phone: string;
 	readonly phoneCountry: string;
+    readonly cca3 : string;
 	readonly currentpre: string;
 	readonly city: string;
 	readonly location: string;
@@ -25,11 +26,16 @@ export interface IUser extends Document{
     readonly is_banned: boolean;
     readonly is_verified: number;
     readonly kyc_completed: boolean;
-    readonly email_verified: number;
+    readonly email_verified: boolean;
     readonly phone_verified: number;
     readonly is_kyc_deleted: boolean;
     readonly passport_url: Express.Multer.File;
     readonly user_photo_url: Express.Multer.File;
     readonly admin_checked_at: string;
     readonly kyc_submitted_date: string;
+    is_2FA_SMS_enabled: boolean;
+    is_2FA_twilio_login_verified: boolean;
+    otpExpiresAt: string;
+    otpCreatedAt: string;
+    twilioOTP: string;
 }

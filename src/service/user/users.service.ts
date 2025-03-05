@@ -90,7 +90,7 @@ export class UserService {
   async getUser(userId: string): Promise<any> {
     const existingUser = await this.userModel
       .findById(userId)
-      .select("-_id -__v -nonce -wallet_type -is_2FA_login_verified -google_auth_secret")
+      .select("-_id -__v -nonce -wallet_type -wallet_address -is_2FA_login_verified -google_auth_secret -otpCreatedAt -otpExpiresAt -twilioOTP")
       .exec();
 
   
@@ -178,8 +178,45 @@ export class UserService {
               },
             },
           },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$email" }, // Adding email field
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$phone" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $toString: "$phoneCountry" },
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
+          {
+            $expr: {
+              $regexMatch: {
+                input: { $concat: [{ $toString: "$phoneCountry" }, { $toString: "$phone" }] }, // Concatenating phoneCountry and phone without a space
+                regex: regexQuery,
+                options: "i",
+              },
+            },
+          },
         ],
       });
+      
     }
     let users;
     if(statusFilter === 'Active'){
@@ -189,7 +226,7 @@ export class UserService {
           { is_banned: undefined }
         ],
         $and: [
-          {email_verified:1, phone_verified : 1} 
+          {email_verified: true, phone_verified : 1} 
         ]
       });
     } else if (statusFilter === 'Ban'){
@@ -199,7 +236,7 @@ export class UserService {
     } else if (statusFilter === 'Email'){
       usersQuery = usersQuery.where({
         $or: [
-          { email_verified:0 },
+          { email_verified: false },
           { email_verified: undefined }
         ],
         is_banned: { $ne: true }
@@ -271,7 +308,7 @@ export class UserService {
           { is_banned: undefined }
         ],
         $and: [
-          {email_verified:1, phone_verified : 1} 
+          {email_verified:true, phone_verified : 1} 
         ]
       });
     } else if (statusFilter === 'Ban'){
@@ -281,7 +318,7 @@ export class UserService {
     } else if (statusFilter === 'Email'){
       userQuery = userQuery.where({
         $or: [
-          { email_verified:0 },
+          { email_verified: false },
           { email_verified: undefined }
         ],
         is_banned: { $ne: true }
@@ -307,7 +344,7 @@ export class UserService {
         { is_banned: undefined }
       ],
       $and: [
-        {email_verified:1, phone_verified : 1} 
+        {email_verified: true, phone_verified : 1} 
       ]
     });
     const activeCount = await userQuery.countDocuments();
@@ -333,7 +370,7 @@ export class UserService {
     let userQuery = this.userModel.find();
     userQuery = userQuery.where({
       $or: [
-        { email_verified: 0 },
+        { email_verified: false },
         { email_verified: undefined }
       ],
       is_banned: { $ne: true }
@@ -379,10 +416,21 @@ export class UserService {
       return User;
   }
 
-  async getFindbyEmail(_id: string, email: string): Promise<any>{
+  async getFindbyId(userId: string): Promise<any>{
     const existingUser = await this.userModel
-    .findOne({ $and: [{ _id }, { email }] })
-    .select("-_id email")
+    .findById(userId)
+    .select("_id email email_verified")
+    .exec();
+    if(existingUser){
+      return existingUser
+    }
+    return [];
+  }
+
+  async getFindbyEmail(email: string): Promise<any>{
+    const existingUser = await this.userModel
+    .findOne({email})
+    .select("_id email email_verified")
     .exec();
     if(existingUser){
       return existingUser
@@ -390,10 +438,21 @@ export class UserService {
     return [];
   }
   
-  async getFindbyPhone(_id: string, phone: string): Promise<any>{
+  async getPhonebyId(userId: string): Promise<any>{
     const existingUser = await this.userModel
-    .findOne({ $and: [{ _id }, { phone }] })
-    .select("-_id phone")
+    .findById(userId)
+    .select("_id phone phone_verified")
+    .exec();
+    if(existingUser){
+      return existingUser
+    }
+    return [];
+  }
+
+  async getFindbyPhone(phone: string): Promise<any>{
+    const existingUser = await this.userModel
+    .findOne({ phone })
+    .select("_id phone")
     .exec();
     if(existingUser){
       return existingUser

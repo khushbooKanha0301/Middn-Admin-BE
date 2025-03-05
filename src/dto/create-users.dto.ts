@@ -27,6 +27,10 @@ export class CreateUserDto {
 
 	@IsOptional()
 	@IsString()
+	cca3: string;
+
+	@IsOptional()
+	@IsString()
 	currentpre: string;
 
 	@IsOptional()
@@ -91,8 +95,7 @@ export class CreateUserDto {
 	kyc_completed: boolean;
 
 	@IsOptional()
-	@IsNumber()
-	email_verified: number;
+	email_verified: boolean;
 
 	@IsOptional()
 	@IsNumber()
@@ -106,4 +109,24 @@ export class CreateUserDto {
 	
 	@IsOptional()
 	kyc_submitted_date: string;
+
+	@IsOptional()
+	@IsString()
+	twilioOTP: string;
+
+	@IsOptional()
+	@IsString()
+	otpCreatedAt: string;
+
+	@IsOptional()
+	@IsString()
+	otpExpiresAt: string;
+
+	@IsOptional()
+	@IsString()
+	is_2FA_twilio_login_verified: boolean;
+
+	@IsOptional()
+	@IsString()
+	is_2FA_SMS_enabled: boolean;
 }

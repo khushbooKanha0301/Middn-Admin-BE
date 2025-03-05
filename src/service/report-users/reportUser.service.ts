@@ -17,11 +17,6 @@ export class ReportUserService {
     try {
       let reportUsersQuery: any[] = [
         {
-          $match: {
-            userStatus: true,
-          },
-        },
-        {
           $lookup: {
             from: "users",
             localField: "report_from_user_address",
@@ -108,11 +103,6 @@ export class ReportUserService {
   async getReportUserCount(querySearch?: any): Promise<number> {
     let reportUsersQuery: any[] = [
         {
-            $match: {
-                userStatus: true,
-            },
-        },
-        {
             $lookup: {
                 from: "users",
                 localField: "report_from_user_address",
@@ -193,7 +183,6 @@ export class ReportUserService {
       let reportUsersQuery: any[] = [
         {
           $match: {
-            userStatus: true,
             report_to_user_address: user_address,
           },
         },
@@ -283,7 +272,6 @@ export class ReportUserService {
 
   async getReportUserCountById(user_address?: string) {
     let reportUsersQuery = this.reportUserModel.find({
-      userStatus:true,
       report_to_user_address: user_address
     });
 
